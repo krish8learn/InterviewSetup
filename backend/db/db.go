@@ -2,8 +2,10 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -25,4 +27,21 @@ func Connect(uri string) (*mongo.Client, error) {
 	}
 
 	return client, nil
+}
+
+// ConnectMySQL creates a MySQL connection, verifies connectivity, and returns it.
+func ConnectMySQL(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), connectTimeout)
+	defer cancel()
+
+	if err := db.PingContext(ctx); err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }

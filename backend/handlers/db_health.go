@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"net/http"
 	"time"
 
@@ -11,8 +12,8 @@ import (
 
 const healthTimeout = 5 * time.Second
 
-// DBHealth returns a handler that checks MongoDB connectivity.
-func DBHealth(client *mongo.Client) http.HandlerFunc {
+// MongoHealth returns a handler that checks MongoDB connectivity.
+func MongoHealth(client *mongo.Client) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -28,5 +29,25 @@ func DBHealth(client *mongo.Client) http.HandlerFunc {
 		}
 
 		utils.WriteJSON(w, http.StatusOK, map[string]string{"status": "MongoDB connected"})
+	}
+}
+
+// MySQLHealth returns a handler that checks MySQL connectivity.
+func MySQLHealth(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), healthTimeout)
+		defer cancel()
+
+		if err := db.PingContext(ctx); err != nil {
+			http.Error(w, `{"error":"MySQL unreachable"}`, http.StatusServiceUnavailable)
+			return
+		}
+
+		utils.WriteJSON(w, http.StatusOK, map[string]string{"status": "MySQL connected"})
 	}
 }

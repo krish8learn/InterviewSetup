@@ -1,40 +1,51 @@
 package main
 
 import (
+	"database/sql"
 	"log"
 	"net/http"
-	"os"
 
-	"github.com/joho/godotenv"
 	"github.com/krish8learn/InterviewSetup/backend/db"
 	"github.com/krish8learn/InterviewSetup/backend/handlers"
+	"github.com/krish8learn/InterviewSetup/backend/model"
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("no .env file found, reading from environment")
-	}
+var (
+	env     *model.EnvKeys
+	client  *mongo.Client
+	mysqlDB *sql.DB
+)
 
-	uri := os.Getenv("MONGO_URI")
-	if uri == "" {
-		log.Fatal("MONGO_URI is not set")
-	}
+func init() {
+	// Load environment configuration
+	env = model.LoadEnv()
 
-	client, err := db.Connect(uri)
+	var err error
+	client, err = db.Connect(env.MongoURI)
 	if err != nil {
 		log.Fatalf("db.Connect failed: %v", err)
 	}
 	log.Println("MongoDB connected")
 
+	mysqlDB, err = db.ConnectMySQL(env.MySQLDSN)
+	if err != nil {
+		log.Fatalf("db.ConnectMySQL failed: %v", err)
+	}
+	log.Println("MySQL connected")
+}
+
+func main() {
+	defer mysqlDB.Close()
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /", handlers.Root())
-	mux.HandleFunc("GET /db-health", handlers.DBHealth(client))
+	mux.HandleFunc("GET /mongo-health", handlers.MongoHealth(client))
+	mux.HandleFunc("GET /mysql-health", handlers.MySQLHealth(mysqlDB))
 
 	// ---------------------------------------------------------------
 	// TODO (interview): register your API routes here, e.g.
-	//   mux.HandleFunc("POST /items", createItem)
-	//   mux.HandleFunc("GET /items/{id}", getItem)
 	// ---------------------------------------------------------------
 
 	log.Println("server listening on :8080")
