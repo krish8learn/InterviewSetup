@@ -1,6 +1,7 @@
 {
   "folders": [
     { "path": "backend", "name": "backend (Go)" },
+    { "path": "frontend", "name": "frontend (React)" },
     { "path": ".", "name": "root" }
   ],
   "settings": {}
